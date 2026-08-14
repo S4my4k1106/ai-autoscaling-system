@@ -19,4 +19,4 @@ df = pd.DataFrame({
 })
 
 df.to_csv("data/training_data.csv", index=False)
-print(f"Done! {len(df)} rows generated")
+print (f"Done! {len(df)} rows generated")

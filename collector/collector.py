@@ -1,10 +1,10 @@
 import psutil
 import time
 import os
+import requests
 from datetime import datetime
 
 filepath = "data/metrics.csv"
-
 
 if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
     with open(filepath, "w") as f:
@@ -28,5 +28,15 @@ while True:
 
     with open(filepath, "a") as f:
         f.write(f"{timestamp},{cpu},{memory},{network}\n")
+
+    try:
+        requests.post("http://localhost:8000/metrics", json={
+            "timestamp": timestamp,
+            "cpu": cpu,
+            "memory": memory,
+            "network_traffic": network
+        })
+    except:
+        pass
 
     time.sleep(1)

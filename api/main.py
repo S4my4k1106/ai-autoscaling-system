@@ -1,23 +1,35 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from datetime import datetime
+from typing import List
 import pickle
-import numpy as np
 
 app = FastAPI()
 
-# Load memory model
 with open("ml/model_memory.pkl", "rb") as f:
     memory_model = pickle.load(f)
 
-# In-memory storage for now (will move to PostgreSQL later)
 sensor_readings = []
 server_metrics = []
 predictions = []
 scaling_events = []
 alerts = []
 
-# ─── Models ───────────────────────────────────────────────────────────────────
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            await connection.send_json(message)
+
+manager = ConnectionManager()
 
 class SensorData(BaseModel):
     device_id: str
@@ -39,8 +51,6 @@ class ServerMetrics(BaseModel):
     memory: float
     network_traffic: float
 
-# ─── Endpoints ────────────────────────────────────────────────────────────────
-
 @app.get("/")
 def root():
     return {"status": "AI Autoscaling API is running"}
@@ -51,18 +61,15 @@ def ingest(data: SensorData):
     return {"status": "received", "device_id": data.device_id}
 
 @app.post("/metrics")
-def receive_metrics(data: ServerMetrics):
+async def receive_metrics(data: ServerMetrics):
     server_metrics.append(data.dict())
 
-    # Predict memory
-    predicted_memory = memory_model.predict([[data.cpu, data.network_traffic]])[0]
+    predicted_memory = float(memory_model.predict([[data.cpu, data.network_traffic]])[0])
     predicted_memory = round(predicted_memory, 2)
 
-    # Autoscaling decision
-    scale_up = predicted_memory > 80 or data.cpu > 80
-    scale_down = predicted_memory < 20 and data.cpu < 20
+    scale_up = bool(predicted_memory > 80 or data.cpu > 80)
+    scale_down = bool(predicted_memory < 20 and data.cpu < 20)
 
-    # Store prediction
     prediction = {
         "timestamp": data.timestamp,
         "cpu": data.cpu,
@@ -73,21 +80,17 @@ def receive_metrics(data: ServerMetrics):
     }
     predictions.append(prediction)
 
-    # Log scaling event
     if scale_up:
-        event = {"timestamp": data.timestamp, "action": "scale_up", "reason": f"predicted_memory={predicted_memory}% cpu={data.cpu}%"}
-        scaling_events.append(event)
-
+        scaling_events.append({"timestamp": data.timestamp, "action": "scale_up", "reason": f"predicted_memory={predicted_memory}%"})
     if scale_down:
-        event = {"timestamp": data.timestamp, "action": "scale_down", "reason": f"predicted_memory={predicted_memory}% cpu={data.cpu}%"}
-        scaling_events.append(event)
+        scaling_events.append({"timestamp": data.timestamp, "action": "scale_down", "reason": f"predicted_memory={predicted_memory}%"})
 
-    # Anomaly detection alert
     if data.cpu > 90:
         alerts.append({"timestamp": data.timestamp, "type": "HIGH_CPU", "value": data.cpu})
     if data.memory > 90:
         alerts.append({"timestamp": data.timestamp, "type": "HIGH_MEMORY", "value": data.memory})
 
+    await manager.broadcast(prediction)
     return prediction
 
 @app.get("/predictions")
@@ -115,3 +118,12 @@ def get_dashboard_data():
         "total_alerts": len(alerts),
         "total_sensor_readings": len(sensor_readings)
     }
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

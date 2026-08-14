@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 df = pd.read_csv("data/IoT_Indoor_Air_Quality_Dataset.csv")
-
+df = df.fillna(0)  # add this line
 print(f"Loaded {len(df)} rows of IoT sensor data")
 print("Starting IoT simulator... Press Ctrl+C to stop.")
 

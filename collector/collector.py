@@ -30,7 +30,7 @@ while True:
         f.write(f"{timestamp},{cpu},{memory},{network}\n")
 
     try:
-       requests.post("http://13.232.238.60:8000/metrics", json={
+       requests.post("http://52.66.250.69:8000/metrics", json={
             "timestamp": timestamp,
             "cpu": cpu,
             "memory": memory,

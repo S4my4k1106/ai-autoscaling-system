@@ -27,7 +27,7 @@ for index, row in df.iterrows():
     }
 
     try:
-        response = requests.post("http://13.232.238.60:8000/ingest", json=payload)
+        response = requests.post("http://52.66.250.69:8000/ingest", json=payload)
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Sent sensor_{index % 50 + 1:02d} → Status: {response.status_code}")
     except Exception as e:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] FastAPI not running yet: {e}")

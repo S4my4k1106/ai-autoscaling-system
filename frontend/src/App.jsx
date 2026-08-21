@@ -5,8 +5,8 @@ import {
 } from "recharts";
 import axios from "axios";
 
-const API = "http://localhost:8000";
-const WS_URL = "ws://localhost:8000/ws";
+const API = "http://13.232.238.60:8000";
+const WS_URL = "ws://13.232.238.60:8000/ws";
 
 const colors = {
   bg: "#f8fafc",

@@ -47,7 +47,7 @@ async def receive_metrics(data: ServerMetrics):
     server_metrics.append(data.dict())
     save_metrics(data)
 
-    predicted_memory, predicted_cpu, scale_up, scale_down = predict(data.cpu, data.network_traffic)
+    predicted_memory, predicted_cpu, scale_up, scale_down = predict(data.cpu, data.network_traffic, data.memory)
 
     prediction = {
         "timestamp": data.timestamp,

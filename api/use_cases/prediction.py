@@ -11,8 +11,7 @@ with open(os.path.join(BASE_DIR, "ml/model_cpu.pkl"), "rb") as f:
 
 WINDOW = 5
 cpu_window = []
-
-def predict(cpu, network_traffic):
+def predict(cpu, network_traffic, actual_memory):
     # Memory prediction
     predicted_memory = float(memory_model.predict([[cpu, network_traffic]])[0])
     predicted_memory = round(predicted_memory, 2)
@@ -28,8 +27,8 @@ def predict(cpu, network_traffic):
     else:
         predicted_cpu = cpu
 
-    # Scaling decisions
-    scale_up = bool(predicted_memory > 80 or predicted_cpu > 80)
-    scale_down = bool(predicted_memory < 20 and predicted_cpu < 20)
+    # Hybrid scaling decisions
+    scale_up = bool(predicted_memory > 80 or predicted_cpu > 80 or actual_memory > 90)
+    scale_down = bool(predicted_memory < 20 and predicted_cpu < 20 and actual_memory < 50)
 
     return predicted_memory, predicted_cpu, scale_up, scale_down

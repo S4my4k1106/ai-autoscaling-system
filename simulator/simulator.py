@@ -32,6 +32,6 @@ for index, row in df.iterrows():
     except Exception as e:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] FastAPI not running yet: {e}")
 
-    time.sleep(2)
+    time.sleep(0.5)  # Adjust the sleep time as needed to control the data sending rate
 
 print("Dataset finished! Restarting...")
